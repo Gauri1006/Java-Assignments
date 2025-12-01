@@ -1,30 +1,14 @@
 import java.io.*;
 import java.util.*;
 
-// ====================== Custom Exception ======================
+// ===================== CUSTOM EXCEPTION =====================
 class StudentNotFoundException extends Exception {
-    public StudentNotFoundException(String msg) {
-        super(msg);
+    public StudentNotFoundException(String message) {
+        super(message);
     }
 }
 
-// ====================== Loader Thread =========================
-class Loader implements Runnable {
-    public void run() {
-        try {
-            System.out.print("Processing");
-            for (int i = 0; i < 5; i++) {
-                Thread.sleep(250);
-                System.out.print(".");
-            }
-            System.out.println();
-        } catch (Exception e) {
-            System.out.println("Thread Interrupted!");
-        }
-    }
-}
-
-// ====================== Abstract Class Person =================
+// ===================== ABSTRACT CLASS =====================
 abstract class Person {
     protected String name;
     protected String email;
@@ -37,14 +21,14 @@ abstract class Person {
     public abstract void displayInfo();
 }
 
-// ====================== Student Class =========================
-class Student extends Person {
-    int rollNo;
-    String course;
-    double marks;
-    char grade;
+// ===================== STUDENT CLASS =====================
+class Student5 extends Person {
+    private int rollNo;
+    private String course;
+    private double marks;
+    private char grade;
 
-    public Student(int rollNo, String name, String email, String course, double marks) {
+    public Student5(int rollNo, String name, String email, String course, double marks) {
         super(name, email);
         this.rollNo = rollNo;
         this.course = course;
@@ -52,281 +36,293 @@ class Student extends Person {
         calculateGrade();
     }
 
+    // ===== GETTERS =====
+    public int getRollNo() { return rollNo; }
+    public String getCourse() { return course; }
+    public double getMarks() { return marks; }
+    public char getGrade() { return grade; }
+    public String getName() { return name; }
+    public String getEmail() { return email; }
+
+    // ===== SETTERS =====
+    public void setName(String name) { this.name = name; }
+    public void setEmail(String email) { this.email = email; }
+    public void setCourse(String course) { this.course = course; }
+    public void setMarks(double marks) { this.marks = marks; calculateGrade(); }
+
     public void calculateGrade() {
-        if (marks >= 90) grade = 'A';
-        else if (marks >= 75) grade = 'B';
+        if (marks >= 85) grade = 'A';
+        else if (marks >= 70) grade = 'B';
         else if (marks >= 50) grade = 'C';
         else grade = 'D';
     }
 
-    public void update(String name, String email, String course, double marks) {
-        this.name = name;
-        this.email = email;
-        this.course = course;
-        this.marks = marks;
-        calculateGrade();
-    }
-
     @Override
     public void displayInfo() {
-        System.out.println("-------------------------------");
-        System.out.println("Roll No : " + rollNo);
-        System.out.println("Name    : " + name);
-        System.out.println("Email   : " + email);
-        System.out.println("Course  : " + course);
-        System.out.println("Marks   : " + marks);
-        System.out.println("Grade   : " + grade);
-        System.out.println("-------------------------------");
+        System.out.println("Roll No: " + rollNo);
+        System.out.println("Name: " + name);
+        System.out.println("Email: " + email);
+        System.out.println("Course: " + course);
+        System.out.println("Marks: " + marks);
+        System.out.println("Grade: " + grade);
+        System.out.println("----------------------");
     }
 
-    @Override
-    public String toString() {
+    public String toCSV() {
         return rollNo + "," + name + "," + email + "," + course + "," + marks;
+    }
+
+    public static Student5 fromCSV(String line) {
+        String[] parts = line.split(",");
+        return new Student5(
+            Integer.parseInt(parts[0]),
+            parts[1],
+            parts[2],
+            parts[3],
+            Double.parseDouble(parts[4])
+        );
     }
 }
 
-// ====================== Interface =============================
+// ===================== INTERFACE =====================
 interface RecordActions {
     void addStudent();
-    void deleteStudent();
+    void deleteStudent() throws StudentNotFoundException;
     void updateStudent();
     void searchStudent() throws StudentNotFoundException;
     void viewAllStudents();
-    void sortByMarks();
 }
 
-// ====================== File Handling ==========================
-class FileUtil {
+// ===================== LOADER CLASS =====================
+class Loader implements Runnable {
+    @Override
+    public void run() {
+        System.out.print("Loading");
+        try {
+            for (int i = 0; i < 5; i++) {
+                Thread.sleep(300);
+                System.out.print(".");
+            }
+            System.out.println();
+        } catch (InterruptedException e) {
+            System.out.println("❌ Loading interrupted.");
+        }
+    }
+}
 
-    public static ArrayList<Student> loadFromFile(String fileName) {
-        ArrayList<Student> list = new ArrayList<>();
+// ===================== STUDENT MANAGER =====================
+class StudentManager5 implements RecordActions {
+    private List<Student5> students = new ArrayList<>();
+    private Map<Integer, Student5> studentMap = new HashMap<>();
+    private Scanner sc = new Scanner(System.in);
+    private final String FILE_NAME = "students.txt";
 
-        try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+    public StudentManager5() {
+        loadFromFile();
+    }
 
+    private void loadFromFile() {
+        File file = new File(FILE_NAME);
+        if (!file.exists()) return;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = br.readLine()) != null) {
-
-                String[] d = line.split(",");
-                if (d.length == 5) {
-                    int roll = Integer.parseInt(d[0]);
-                    String name = d[1];
-                    String email = d[2];
-                    String course = d[3];
-                    double marks = Double.parseDouble(d[4]);
-
-                    list.add(new Student(roll, name, email, course, marks));
-                }
+                Student5 s = Student5.fromCSV(line);
+                students.add(s);
+                studentMap.put(s.getRollNo(), s);
             }
-
-        } catch (FileNotFoundException e) {
-            System.out.println("students.txt not found. A new file will be created.");
-        } catch (Exception e) {
-            System.out.println("Error reading file: " + e.getMessage());
+        } catch (IOException e) {
+            System.out.println("❌ Error loading file: " + e.getMessage());
         }
-
-        return list;
     }
 
-    public static void saveToFile(ArrayList<Student> list, String fileName) {
-
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(fileName))) {
-
-            for (Student s : list) {
-                bw.write(s.toString());
+    private void saveToFile() {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(FILE_NAME))) {
+            for (Student5 s : students) {
+                bw.write(s.toCSV());
                 bw.newLine();
             }
-
-            System.out.println("Data saved to students.txt");
-
-        } catch (Exception e) {
-            System.out.println("File write error: " + e.getMessage());
+        } catch (IOException e) {
+            System.out.println("❌ Error saving file: " + e.getMessage());
         }
-    }
-
-    public static void randomRead(String fileName) {
-        try (RandomAccessFile raf = new RandomAccessFile(fileName, "r")) {
-
-            System.out.println("RandomAccessFile Length: " + raf.length());
-            System.out.print("First 20 characters: ");
-
-            for (int i = 0; i < 20 && i < raf.length(); i++) {
-                System.out.print((char) raf.read());
-            }
-
-            System.out.println();
-
-        } catch (Exception e) {
-            System.out.println("Random access error: " + e.getMessage());
-        }
-    }
-}
-
-// ====================== Student Manager =======================
-class StudentManager implements RecordActions {
-
-    ArrayList<Student> students = new ArrayList<>();
-    Scanner sc = new Scanner(System.in);
-
-    public StudentManager() {
-        students = FileUtil.loadFromFile("students.txt");
     }
 
     @Override
     public void addStudent() {
         try {
             System.out.print("Enter Roll No: ");
-            int roll = sc.nextInt(); sc.nextLine();
-
-            for (Student s : students) {
-                if (s.rollNo == roll) {
-                    System.out.println("Duplicate roll number!");
-                    return;
-                }
+            int roll = Integer.parseInt(sc.nextLine());
+            if (studentMap.containsKey(roll)) {
+                System.out.println("❌ Roll No already exists!");
+                return;
             }
 
             System.out.print("Enter Name: ");
-            String name = sc.nextLine();
+            String name = sc.nextLine().trim();
 
             System.out.print("Enter Email: ");
-            String email = sc.nextLine();
+            String email = sc.nextLine().trim();
 
             System.out.print("Enter Course: ");
-            String course = sc.nextLine();
+            String course = sc.nextLine().trim();
 
             System.out.print("Enter Marks: ");
-            double marks = sc.nextDouble();
+            double marks = Double.parseDouble(sc.nextLine());
+            if (marks < 0 || marks > 100) {
+                System.out.println("❌ Marks must be between 0 and 100.");
+                return;
+            }
 
-            if (marks < 0 || marks > 100) throw new Exception("Marks must be 0–100");
+            Thread loader = new Thread(new Loader());
+            loader.start();
+            loader.join();
 
-            Thread t = new Thread(new Loader());
-            t.start();
-            t.join();
-
-            students.add(new Student(roll, name, email, course, marks));
-            System.out.println("Student added!");
-
+            Student5 s = new Student5(roll, name, email, course, marks);
+            students.add(s);
+            studentMap.put(roll, s);
+            System.out.println("✅ Student added successfully!");
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-            sc.nextLine();
+            System.out.println("❌ Invalid input: " + e.getMessage());
         }
     }
 
     @Override
-    public void deleteStudent() {
-        System.out.print("Enter roll no to delete: ");
-        int roll = sc.nextInt();
-
-        boolean removed = students.removeIf(s -> s.rollNo == roll);
-
-        if (removed) System.out.println("Student deleted.");
-        else System.out.println("Record not found.");
+    public void deleteStudent() throws StudentNotFoundException {
+        System.out.print("Enter name to delete: ");
+        String name = sc.nextLine().trim();
+        boolean found = false;
+        Iterator<Student5> it = students.iterator();
+        while (it.hasNext()) {
+            Student5 s = it.next();
+            if (s.getName().equalsIgnoreCase(name)) {
+                it.remove();
+                studentMap.remove(s.getRollNo());
+                found = true;
+                System.out.println("✅ Student record deleted.");
+            }
+        }
+        if (!found) throw new StudentNotFoundException("Student not found.");
     }
 
     @Override
     public void updateStudent() {
-        System.out.print("Enter roll no to update: ");
-        int roll = sc.nextInt(); sc.nextLine();
-
-        for (Student s : students) {
-            if (s.rollNo == roll) {
-
-                System.out.print("New Name: ");
-                String name = sc.nextLine();
-
-                System.out.print("New Email: ");
-                String email = sc.nextLine();
-
-                System.out.print("New Course: ");
-                String course = sc.nextLine();
-
-                System.out.print("New Marks: ");
-                double marks = sc.nextDouble();
-
-                s.update(name, email, course, marks);
-                System.out.println("Updated!");
-                return;
-            }
+        System.out.print("Enter Roll No to update: ");
+        int roll = Integer.parseInt(sc.nextLine());
+        if (!studentMap.containsKey(roll)) {
+            System.out.println("❌ Student not found.");
+            return;
         }
-        System.out.println("Record not found.");
+        Student5 s = studentMap.get(roll);
+
+        System.out.print("Enter new Name (" + s.getName() + "): ");
+        String name = sc.nextLine().trim();
+        if (!name.isEmpty()) s.setName(name);
+
+        System.out.print("Enter new Email (" + s.getEmail() + "): ");
+        String email = sc.nextLine().trim();
+        if (!email.isEmpty()) s.setEmail(email);
+
+        System.out.print("Enter new Course (" + s.getCourse() + "): ");
+        String course = sc.nextLine().trim();
+        if (!course.isEmpty()) s.setCourse(course);
+
+        System.out.print("Enter new Marks (" + s.getMarks() + "): ");
+        String marksStr = sc.nextLine().trim();
+        if (!marksStr.isEmpty()) {
+            double marks = Double.parseDouble(marksStr);
+            s.setMarks(marks);
+        }
+
+        System.out.println("✅ Student updated successfully!");
     }
 
     @Override
     public void searchStudent() throws StudentNotFoundException {
-        System.out.print("Enter roll no to search: ");
-        int roll = sc.nextInt();
-
-        for (Student s : students) {
-            if (s.rollNo == roll) {
+        System.out.print("Enter name to search: ");
+        String name = sc.nextLine().trim();
+        boolean found = false;
+        for (Student5 s : students) {
+            if (s.getName().equalsIgnoreCase(name)) {
+                System.out.println("Student Info:");
                 s.displayInfo();
-                return;
+                found = true;
             }
         }
-
-        throw new StudentNotFoundException("Student not found!");
+        if (!found) throw new StudentNotFoundException("Student not found.");
     }
 
     @Override
     public void viewAllStudents() {
         if (students.isEmpty()) {
-            System.out.println("No records found.");
+            System.out.println("⚠ No students to display.");
             return;
         }
-
-        Iterator<Student> itr = students.iterator();
-        while (itr.hasNext()) {
-            itr.next().displayInfo();
-        }
+        System.out.println("===== ALL STUDENTS =====");
+        Iterator<Student5> it = students.iterator();
+        while (it.hasNext()) it.next().displayInfo();
     }
 
-    @Override
     public void sortByMarks() {
-        students.sort((a, b) -> Double.compare(b.marks, a.marks));
-        System.out.println("Sorted by marks:");
+        students.sort(Comparator.comparingDouble(Student5::getMarks).reversed());
+        System.out.println("Sorted Student List by Marks:");
         viewAllStudents();
     }
 
     public void saveAndExit() {
-        FileUtil.saveToFile(students, "students.txt");
-        FileUtil.randomRead("students.txt");
-        System.out.println("Exiting...");
-        System.exit(0);
+        Thread loader = new Thread(new Loader());
+        try {
+            loader.start();
+            loader.join();
+            saveToFile();
+            System.out.println("✅ Saved and exiting.");
+        } catch (InterruptedException e) {
+            System.out.println("❌ Error during saving: " + e.getMessage());
+        }
     }
 }
 
-// ====================== MAIN CLASS ===========================
-public class RecordSystem5 {
+// ===================== MAIN CLASS =====================
+public class Assignment5 {
     public static void main(String[] args) {
-
-        StudentManager manager = new StudentManager();
+        StudentManager5 manager = new StudentManager5();
         Scanner sc = new Scanner(System.in);
+        int choice;
 
-        while (true) {
-            System.out.println("\n===== Capstone Student Menu =====");
+        do {
+            System.out.println("\n===== CAPSTONE STUDENT MENU =====");
             System.out.println("1. Add Student");
             System.out.println("2. View All Students");
-            System.out.println("3. Search Student");
-            System.out.println("4. Update Student");
-            System.out.println("5. Delete Student");
-            System.out.println("6. Sort by Marks");
-            System.out.println("7. Save & Exit");
+            System.out.println("3. Search by Name");
+            System.out.println("4. Delete by Name");
+            System.out.println("5. Sort by Marks");
+            System.out.println("6. Update Student");
+            System.out.println("7. Save and Exit");
             System.out.print("Enter choice: ");
 
-            int ch = sc.nextInt();
-
             try {
-                switch (ch) {
-                    case 1: manager.addStudent(); break;
-                    case 2: manager.viewAllStudents(); break;
-                    case 3: manager.searchStudent(); break;
-                    case 4: manager.updateStudent(); break;
-                    case 5: manager.deleteStudent(); break;
-                    case 6: manager.sortByMarks(); break;
-                    case 7: manager.saveAndExit(); break;
-                    default: System.out.println("Invalid choice!");
+                choice = Integer.parseInt(sc.nextLine().trim());
+                switch (choice) {
+                    case 1 -> manager.addStudent();
+                    case 2 -> manager.viewAllStudents();
+                    case 3 -> {
+                        try { manager.searchStudent(); }
+                        catch (StudentNotFoundException e) { System.out.println("❌ " + e.getMessage()); }
+                    }
+                    case 4 -> {
+                        try { manager.deleteStudent(); }
+                        catch (StudentNotFoundException e) { System.out.println("❌ " + e.getMessage()); }
+                    }
+                    case 5 -> manager.sortByMarks();
+                    case 6 -> manager.updateStudent();
+                    case 7 -> { manager.saveAndExit(); choice = 7; }
+                    default -> System.out.println("❌ Invalid choice!");
                 }
             } catch (Exception e) {
-                System.out.println("Error: " + e.getMessage());
+                System.out.println("❌ Invalid input: " + e.getMessage());
+                choice = 0;
             }
-        }
+
+        } while (choice != 7);
     }
 }
