@@ -1,20 +1,132 @@
 import java.util.*;
 
-// Custom Exception
-class StudentNotFoundException extends Exception {
-    public StudentNotFoundException(String msg) {
-        super(msg);
+// ===================== CUSTOM EXCEPTION =====================
+class StudentNotFoundExceptionA3 extends Exception {
+    public StudentNotFoundExceptionA3(String message) {
+        super(message);
     }
 }
 
-// Loader Thread (Multithreading)
-class Loader implements Runnable {
+// ===================== ABSTRACT PERSON CLASS =====================
+abstract class PersonA3 {
+    protected String name;
+    protected String email;
+
+    public PersonA3(String name, String email) {
+        this.name = name;
+        this.email = email;
+    }
+
+    public abstract void displayInfo();
+}
+
+// ===================== STUDENT CLASS =====================
+class StudentA3 extends PersonA3 {
+    private Integer rollNo;
+    private String course;
+    private Double marks;
+    private char grade;
+
+    public StudentA3(Integer rollNo, String name, String email, String course, Double marks) {
+        super(name, email);
+        this.rollNo = rollNo;
+        this.course = course;
+        this.marks = marks;
+        calculateGrade();
+    }
+
+    private void calculateGrade() {
+        if (marks >= 90) grade = 'A';
+        else if (marks >= 75) grade = 'B';
+        else if (marks >= 60) grade = 'C';
+        else if (marks >= 40) grade = 'D';
+        else grade = 'F';
+    }
+
+    public Integer getRollNo() {
+        return rollNo;
+    }
+
+    @Override
+    public void displayInfo() {
+        System.out.println("Roll No: " + rollNo);
+        System.out.println("Name: " + name);
+        System.out.println("Email: " + email);
+        System.out.println("Course: " + course);
+        System.out.println("Marks: " + marks);
+        System.out.println("Grade: " + grade);
+    }
+}
+
+// ===================== INTERFACE =====================
+interface RecordActionsA3 {
+    void addStudent();
+    void displayStudent(Integer rollNo) throws StudentNotFoundExceptionA3;
+}
+
+// ===================== STUDENT MANAGER =====================
+class StudentManagerA3 implements RecordActionsA3 {
+    private Map<Integer, StudentA3> studentMap = new HashMap<>();
+    private Scanner sc = new Scanner(System.in);
+
+    @Override
+    public void addStudent() {
+        try {
+            System.out.print("Enter Roll No (Integer): ");
+            Integer rollNo = Integer.valueOf(sc.nextLine().trim());
+
+            System.out.print("Enter Name: ");
+            String name = sc.nextLine().trim();
+            if (name.isEmpty()) throw new IllegalArgumentException("Name cannot be empty!");
+
+            System.out.print("Enter Email: ");
+            String email = sc.nextLine().trim();
+            if (email.isEmpty()) throw new IllegalArgumentException("Email cannot be empty!");
+
+            System.out.print("Enter Course: ");
+            String course = sc.nextLine().trim();
+            if (course.isEmpty()) throw new IllegalArgumentException("Course cannot be empty!");
+
+            System.out.print("Enter Marks: ");
+            Double marks = Double.valueOf(sc.nextLine().trim());
+            if (marks < 0 || marks > 100)
+                throw new IllegalArgumentException("Marks must be between 0 and 100!");
+
+            // Multithreading loading simulation
+            LoaderA3 loader = new LoaderA3();
+            Thread t = new Thread(loader);
+            t.start();
+            t.join(); // Wait for thread
+
+            StudentA3 s = new StudentA3(rollNo, name, email, course, marks);
+            studentMap.put(rollNo, s);
+            s.displayInfo();
+
+        } catch (NumberFormatException e) {
+            System.out.println("❌ Invalid numeric input! Please enter valid integers or doubles.");
+        } catch (IllegalArgumentException e) {
+            System.out.println("❌ " + e.getMessage());
+        } catch (InterruptedException e) {
+            System.out.println("❌ Thread interrupted!");
+        }
+    }
+
+    @Override
+    public void displayStudent(Integer rollNo) throws StudentNotFoundExceptionA3 {
+        StudentA3 s = studentMap.get(rollNo);
+        if (s == null) throw new StudentNotFoundExceptionA3("Student with roll no " + rollNo + " not found!");
+        s.displayInfo();
+    }
+}
+
+// ===================== LOADER CLASS =====================
+class LoaderA3 implements Runnable {
     @Override
     public void run() {
         try {
             System.out.print("Loading");
-            for (int i = 0; i < 5; i++) {
-                Thread.sleep(300);
+            for (int i = 0; i < 3; i++) {
+                Thread.sleep(500);
                 System.out.print(".");
             }
             System.out.println();
@@ -24,181 +136,44 @@ class Loader implements Runnable {
     }
 }
 
-// Student Class
-class Student {
-    private Integer rollNo;
-    private String name;
-    private String email;
-    private String course;
-    private Double marks;
-    private char grade;
-
-    public Student(Integer rollNo, String name, String email, String course, Double marks) {
-        this.rollNo = rollNo;
-        this.name = name;
-        this.email = email;
-        this.course = course;
-        this.marks = marks;
-        calculateGrade();
-    }
-
-    private void calculateGrade() {
-        if (marks >= 90) grade = 'A';
-        else if (marks >= 75) grade = 'B';
-        else if (marks >= 50) grade = 'C';
-        else grade = 'D';
-    }
-
-    public Integer getRollNo() {
-        return rollNo;
-    }
-
-    public void display() {
-        System.out.println("------------------------------");
-        System.out.println("Roll No: " + rollNo);
-        System.out.println("Name: " + name);
-        System.out.println("Email: " + email);
-        System.out.println("Course: " + course);
-        System.out.println("Marks: " + marks);
-        System.out.println("Grade: " + grade);
-        System.out.println("------------------------------");
-    }
-}
-
-// Interface
-interface RecordActions {
-    void addStudent();
-    void searchStudent() throws StudentNotFoundException;
-    void viewAllStudents();
-}
-
-// Student Manager implementing interface
-class StudentManager implements RecordActions {
-
-    private Map<Integer, Student> students = new HashMap<>();
-    private Scanner sc = new Scanner(System.in);
-
-    // Helper: Validate Marks
-    private Double validateMarks(Double marks) throws Exception {
-        if (marks < 0 || marks > 100)
-            throw new Exception("Marks must be between 0 and 100!");
-        return marks;
-    }
-
-    @Override
-    public void addStudent() {
-        try {
-            System.out.print("Enter Roll No (Integer): ");
-            Integer roll = Integer.valueOf(sc.nextInt());
-            sc.nextLine();
-
-            if (students.containsKey(roll)) {
-                System.out.println("Duplicate Roll No! Cannot add.");
-                return;
-            }
-
-            System.out.print("Enter Name: ");
-            String name = sc.nextLine();
-            if (name.isEmpty()) throw new Exception("Name cannot be empty!");
-
-            System.out.print("Enter Email: ");
-            String email = sc.nextLine();
-            if (email.isEmpty()) throw new Exception("Email cannot be empty!");
-
-            System.out.print("Enter Course: ");
-            String course = sc.nextLine();
-            if (course.isEmpty()) throw new Exception("Course cannot be empty!");
-
-            System.out.print("Enter Marks (Double): ");
-            Double marks = Double.valueOf(sc.nextDouble());
-
-            marks = validateMarks(marks); // exception check
-
-            // Multithreading Loader
-            Thread t = new Thread(new Loader());
-            t.start();
-            t.join();
-
-            Student s = new Student(roll, name, email, course, marks);
-            students.put(roll, s);
-
-            System.out.println("Student added successfully!");
-
-        } catch (InputMismatchException e) {
-            System.out.println("Invalid Input Type! Please enter correct values.");
-            sc.nextLine();
-        } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-        } finally {
-            System.out.println("Operation completed.\n");
-        }
-    }
-
-    @Override
-    public void searchStudent() throws StudentNotFoundException {
-        System.out.print("Enter Roll No to search: ");
-        Integer roll = Integer.valueOf(sc.nextInt());
-
-        if (!students.containsKey(roll)) {
-            throw new StudentNotFoundException("Student with Roll No " + roll + " not found!");
-        }
-
-        students.get(roll).display();
-    }
-
-    @Override
-    public void viewAllStudents() {
-        if (students.isEmpty()) {
-            System.out.println("No records found.");
-            return;
-        }
-        for (Student s : students.values()) {
-            s.display();
-        }
-    }
-}
-
-// MAIN CLASS — renamed as requested
-public class RecordSystem3 {
+// ===================== MAIN CLASS =====================
+public class Assignment3 {
     public static void main(String[] args) {
-
+        StudentManagerA3 manager = new StudentManagerA3();
         Scanner sc = new Scanner(System.in);
-        StudentManager manager = new StudentManager();
+        int choice;
 
-        while (true) {
-            System.out.println("===== Student Management Menu =====");
+        do {
+            System.out.println("\n===== STUDENT MANAGEMENT MENU =====");
             System.out.println("1. Add Student");
-            System.out.println("2. Search Student");
-            System.out.println("3. View All Students");
-            System.out.println("4. Exit");
-            System.out.print("Enter choice: ");
+            System.out.println("2. Display Student by Roll No");
+            System.out.println("3. Exit");
+            System.out.print("Enter your choice: ");
 
-            int choice = sc.nextInt();
+            try {
+                choice = Integer.parseInt(sc.nextLine().trim());
 
-            switch (choice) {
-                case 1:
-                    manager.addStudent();
-                    break;
-
-                case 2:
-                    try {
-                        manager.searchStudent();
-                    } catch (StudentNotFoundException e) {
-                        System.out.println(e.getMessage());
+                switch (choice) {
+                    case 1 -> manager.addStudent();
+                    case 2 -> {
+                        System.out.print("Enter Roll No to Display: ");
+                        Integer roll = Integer.valueOf(sc.nextLine().trim());
+                        try {
+                            manager.displayStudent(roll);
+                        } catch (StudentNotFoundExceptionA3 e) {
+                            System.out.println("❌ " + e.getMessage());
+                        }
                     }
-                    break;
-
-                case 3:
-                    manager.viewAllStudents();
-                    break;
-
-                case 4:
-                    System.out.println("Program execution completed.");
-                    return;
-
-                default:
-                    System.out.println("Invalid choice! Try again.");
+                    case 3 -> System.out.println("Exiting... Goodbye!");
+                    default -> System.out.println("❌ Invalid choice! Try again.");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("❌ Invalid input! Enter a number.");
+                choice = 0; // To continue loop
             }
-        }
+
+        } while (choice != 3);
+
+        System.out.println("Program execution completed.");
     }
 }
